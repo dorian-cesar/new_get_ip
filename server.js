@@ -3,35 +3,48 @@ const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config();
-const app = express();
-const PORT = process.env.PORT || 3000;
 const { logoData } = require('./logo.js');
+
+const app = express();
+
+// ========================================
+// 🔹 Cargar variables del .env manualmente
+// ========================================
+function loadEnv(filePath = '.env') {
+  const envPath = path.resolve(__dirname, filePath);
+  if (fs.existsSync(envPath)) {
+    const envFile = fs.readFileSync(envPath, 'utf8');
+    envFile.split('\n').forEach(line => {
+      const match = line.match(/^([^#=]+)=(.*)$/);
+      if (match) {
+        const key = match[1].trim();
+        const value = match[2].trim().replace(/^['"]|['"]$/g, ""); // quita comillas
+        process.env[key] = value;
+      }
+    });
+  }
+}
+loadEnv();
+
+// Puerto
+const PORT = process.env.PORT || 3000;
 
 // 🔥 Configuración dinámica de CORS según el entorno
 const corsOptions = {
   origin: function (origin, callback) {
-    // En desarrollo permitir todos los orígenes
     if (process.env.NODE_ENV === 'development') {
+      // En desarrollo permitir todos los orígenes
       callback(null, true);
-    } 
-    // En producción permitir solo el origen específico del .env
-    else if (process.env.NODE_ENV === 'production') {
+    } else if (process.env.NODE_ENV === 'production') {
       const allowedOrigin = process.env.ALLOWED_ORIGIN;
-      
-      // Si no hay origen definido (llamadas desde servidor), permitir
-      if (!origin) return callback(null, true);
-      
-      // Verificar si el origen está permitido
+      if (!origin) return callback(null, true); // llamadas sin origen (ej: servidor)
       if (allowedOrigin && origin === allowedOrigin) {
         callback(null, true);
       } else {
         callback(new Error('Origen no permitido por CORS'));
       }
-    } 
-    // Por defecto permitir todos (para otros entornos)
-    else {
-      callback(null, true);
+    } else {
+      callback(null, true); // por defecto
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -50,7 +63,9 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
-// Función para generar comandos ESC/POS
+// ========================================
+// 🔹 Función para generar comandos ESC/POS
+// ========================================
 function generatePrintCommand(content, boleto) {
   function appendBytes(arr1, arr2) {
     const merged = new Uint8Array(arr1.length + arr2.length);
@@ -83,8 +98,7 @@ function generatePrintCommand(content, boleto) {
       escPos = appendBytes(escPos, new Uint8Array([0x1B, 0x61, 0x00]));
       escPos = appendBytes(escPos, encoder.encode(boleto));
       escPos = appendBytes(escPos, feedAndCut());
-    }        
-    else if (boleto) {
+    } else if (boleto) {
       const firstLine = boleto.split('\n')[0] || '---------';
       escPos = appendBytes(escPos, new Uint8Array([0x1B, 0x40]));
       escPos = appendBytes(escPos, new Uint8Array([0x1B, 0x61, 0x01]));
@@ -98,8 +112,7 @@ function generatePrintCommand(content, boleto) {
       escPos = appendBytes(escPos, new Uint8Array([0x1B, 0x61, 0x00]));
       escPos = appendBytes(escPos, encoder.encode(boleto));
       escPos = appendBytes(escPos, feedAndCut());
-    } 
-    else if (content) {
+    } else if (content) {
       escPos = appendBytes(escPos, new Uint8Array([0x1B, 0x61, 0x00]));
       escPos = appendBytes(escPos, encoder.encode(content));
       escPos = appendBytes(escPos, feedAndCut());
@@ -120,7 +133,9 @@ function generatePrintCommand(content, boleto) {
   return uint8ToBase64(escPosData);
 }
 
-// Ruta principal
+// ========================================
+// 🔹 Rutas
+// ========================================
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -128,33 +143,28 @@ app.get('/', (req, res) => {
 // Ruta protegida para obtener credenciales
 app.get('/get_credentials', (req, res) => {
   const authHeader = req.headers['x-api-auth'];
-
-  // Validar que el header coincida con la clave del .env
   if (authHeader !== process.env.INTERNAL_AUTH_TOKEN) {
     return res.status(403).json({ error: 'Acceso no autorizado' });
   }
-
-  // Retornar las credenciales desde el .env
   res.json({
     email: process.env.FRONT_EMAIL,
     password: process.env.FRONT_PASSWORD
   });
 });
 
-// 🔹 Obtener IP y ubicación desde .env
+// Obtener IP y ubicación
 app.get('/get_ip', (req, res) => {
-  res.json({ 
-    ip: process.env.AMOS_IP, 
-    ubicación: process.env.AMOS_LOCATION 
+  res.json({
+    ip: process.env.AMOS_IP,
+    ubicacion: process.env.AMOS_LOCATION
   });
 });
 
 app.post('/print', (req, res) => {
-  const { content, boleto } = req.body;  
+  const { content, boleto } = req.body;
   if (!content && !boleto) {
     return res.status(400).json({ error: 'No hay datos proporcionados' });
   }
-
   try {
     const base64 = generatePrintCommand(content, boleto);
     res.json({ rawbt: `rawbt:base64,${base64}` });
@@ -164,13 +174,14 @@ app.post('/print', (req, res) => {
   }
 });
 
-// Opciones SSL
+// ========================================
+// 🔹 Servidor HTTPS
+// ========================================
 const sslOptions = {
   key: fs.readFileSync('./key.pem'),
   cert: fs.readFileSync('./cert.pem'),
 };
 
-// Iniciar servidor HTTPS
 https.createServer(sslOptions, app).listen(PORT, () => {
   console.log(` \~E API escuchando en puerto ${PORT}`);
   console.log(`Entorno: ${process.env.NODE_ENV || 'development'}`);

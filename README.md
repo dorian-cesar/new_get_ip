@@ -16,13 +16,13 @@ Generar certificado SSL
     openssl req -new -x509 -key key.pem -out cert.pem -days 36500
 
 Dar permisos 
-    chmod +x ~/get_ip/start-server.sh
+    chmod +x ~/new_get_ip/start-server.sh
 
 
 En el home de Termux se debe configurar el archivo bashrc:
 
     nano ~/.bashrc 
-        escribir-> get_ip/start-server.sh
+        escribir-> new_get_ip/start-server.sh
 
 
 Una vez corriendo el servidor, en el buscador del totem se debe acceder a la url https://localhost:3000/index.html y se debe marcar como conexión segura

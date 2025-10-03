@@ -6,7 +6,7 @@ echo " _~T  Iniciando servidor Node.js..."
 export PATH="/data/data/com.termux/files/usr/bin:$PATH"
 
 # Navega al directorio
-cd /data/data/com.termux/files/home/get_ip || {
+cd /data/data/com.termux/files/home/new_get_ip || {
     echo "Error: No se pudo acceder al directorio"
     exit 1
 }
