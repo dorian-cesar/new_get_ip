@@ -1,13 +1,20 @@
 # get_ip
-Pequeño backend hecho con Node.js para exponer ip de totem android y habilitar impresión desde frontend en la web
+Pequeño backend hecho con Node.js para exponer ip de servidor Transbank en el totem android y habilitar impresión desde frontend en la web
 
-Se debe instalar Termux version 1001 para el android 10
+Se debe instalar Termux version 1001 para el android 7
 
 Instalar desde Play Store RawBt (app de impresión)
 
 Instalar node.js
 
-    pkg install nodejs
+    pkg install nodejs-lts
+
+Instalar Git
+    pkg install git
+
+    git clone https://github.com/turepo/new_get_ip.git
+    cd new_get_ip
+    npm install
 
 Generar certificado SSL
 
@@ -16,8 +23,8 @@ Generar certificado SSL
     openssl req -new -x509 -key key.pem -out cert.pem -days 36500
 
 Dar permisos 
-    chmod +x ~/new_get_ip/start-server.sh
-
+    su para usar root:
+    chmod -R 777 new_get_ip
 
 En el home de Termux se debe configurar el archivo bashrc:
 
@@ -27,34 +34,9 @@ En el home de Termux se debe configurar el archivo bashrc:
 
 Una vez corriendo el servidor, en el buscador del totem se debe acceder a la url https://localhost:3000/index.html y se debe marcar como conexión segura
 
-Link para probar impresora: https://test-imp-totem2.netlify.app/
 
 Desactivar Launcher3 con ADB: adb shell pm disable-user --user 0 com.android.launcher3
 
-Para que el frontend consuma la API /print del servidor, debe realizar una petición POST al endpoint https://localhost:3000/print (o a la IP correspondiente), enviando en el cuerpo de la solicitud los campos content y/o boleto.
-
-    Ejemplo:
-            fetch('https://localhost:3000/print', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: {
-                    content: 'Este es el contenido del voucher',
-                    boleto: 'Este es el contenido del boleto'
-                }
-                })
-                .then(response => response.json())
-                .then(data => {
-                console.log('Respuesta del servidor:', data);
-                // Si estás usando RawBT en Android, puedes redirigir o usar window.open:
-                if (data.rawbt) {                    
-                    window.location.href = data.rawbt
-                }
-                })
-                .catch(error => {
-                console.error('Error al enviar a imprimir:', error);
-                });
 
 Tecnologías y módulos usados:
 
@@ -74,7 +56,7 @@ Se configura con:
 El middleware cors permite aceptar peticiones desde otros orígenes, como un frontend en otra IP o puerto.
 
 5. File System (fs)
-Permite leer los certificados SSL (key.pem, cert.pem) directamente.
+Permite leer los certificados SSL (key.pem, cert.pem) y el .env directamente.
 
 6. Path
 El módulo path ayuda a construir rutas de archivos de forma segura (compatible con Windows, Linux, etc.).
@@ -93,25 +75,3 @@ Este es el estándar de comandos binarios usado por muchas impresoras térmicas.
 9. Base64 + RawBT
 El servidor convierte el buffer ESC/POS a base64, lo que permite usarlo con apps como RawBT a través de este esquema de URL: { "rawbt": "rawbt:base64,..." }
 En el frontend se puede redirigir a window.location.href = data.rawbt para que se abra directamente la app de impresión.
-
-cmd package install-existing com.android.launcher3
-pm enable --user 0 com.android.launcher3
-
-
-
-
-    
-GNU nano 8.4                                                         start-print.sh
-#!/data/data/com.termux/files/usr/bin/bash
-
-echo " _~T  Iniciando servidor Node.js..."
-
-su <<'EOF'
-export PATH=/data/data/com.termux/files/usr/bin:$PATH
-cd /data/data/com.termux/files/home/Imprimir
-nohup node server.js &
-chmod 666 /dev/usb/lp0
-exit
-EOF
-
-echo " \~E Servidor iniciado correctamente"
