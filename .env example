@@ -1,2 +1,16 @@
+# Entorno (development/production)
+NODE_ENV=production
+
+# Origen permitido en producción
+ALLOWED_ORIGIN=https://bano-autoservicio.netlify.app/
+
 PORT=3000
 AMOS_IP=10.5.20.94
+AMOS_LOCATION=Terminal Sur
+
+# Credenciales que usará el front
+FRONT_EMAIL=totem1@wit.la
+FRONT_PASSWORD=passSegura123
+
+# Token secreto compartido entre backend y frontend
+INTERNAL_AUTH_TOKEN=passSegura123

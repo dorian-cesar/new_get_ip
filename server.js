@@ -3,15 +3,52 @@ const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config();  // 🔹 Importante para leer .env
+require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 const { logoData } = require('./logo.js');
 
-// Middlewares
-app.use(cors());
+// 🔥 Configuración dinámica de CORS según el entorno
+const corsOptions = {
+  origin: function (origin, callback) {
+    // En desarrollo permitir todos los orígenes
+    if (process.env.NODE_ENV === 'development') {
+      callback(null, true);
+    } 
+    // En producción permitir solo el origen específico del .env
+    else if (process.env.NODE_ENV === 'production') {
+      const allowedOrigin = process.env.ALLOWED_ORIGIN;
+      
+      // Si no hay origen definido (llamadas desde servidor), permitir
+      if (!origin) return callback(null, true);
+      
+      // Verificar si el origen está permitido
+      if (allowedOrigin && origin === allowedOrigin) {
+        callback(null, true);
+      } else {
+        callback(new Error('Origen no permitido por CORS'));
+      }
+    } 
+    // Por defecto permitir todos (para otros entornos)
+    else {
+      callback(null, true);
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Auth']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static('public'));
+
+// Manejo de errores CORS
+app.use((err, req, res, next) => {
+  if (err.message === 'Origen no permitido por CORS') {
+    return res.status(403).json({ error: 'Origen no permitido' });
+  }
+  next(err);
+});
 
 // Función para generar comandos ESC/POS
 function generatePrintCommand(content, boleto) {
@@ -88,9 +125,28 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 🔹 Obtener IP desde .env
+// Ruta protegida para obtener credenciales
+app.get('/get_credentials', (req, res) => {
+  const authHeader = req.headers['x-api-auth'];
+
+  // Validar que el header coincida con la clave del .env
+  if (authHeader !== process.env.INTERNAL_AUTH_TOKEN) {
+    return res.status(403).json({ error: 'Acceso no autorizado' });
+  }
+
+  // Retornar las credenciales desde el .env
+  res.json({
+    email: process.env.FRONT_EMAIL,
+    password: process.env.FRONT_PASSWORD
+  });
+});
+
+// 🔹 Obtener IP y ubicación desde .env
 app.get('/get_ip', (req, res) => {
-  res.json({ ip: process.env.AMOS_IP});
+  res.json({ 
+    ip: process.env.AMOS_IP, 
+    ubicación: process.env.AMOS_LOCATION 
+  });
 });
 
 app.post('/print', (req, res) => {
@@ -117,4 +173,6 @@ const sslOptions = {
 // Iniciar servidor HTTPS
 https.createServer(sslOptions, app).listen(PORT, () => {
   console.log(` \~E API escuchando en puerto ${PORT}`);
+  console.log(`Entorno: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`CORS: ${process.env.NODE_ENV === 'production' ? 'Origen restringido' : 'Todos los orígenes'}`);
 });
