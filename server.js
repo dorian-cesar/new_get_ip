@@ -156,7 +156,8 @@ app.get('/get_credentials', (req, res) => {
 app.get('/get_ip', (req, res) => {
   res.json({
     ip: process.env.AMOS_IP,
-    ubicacion: process.env.AMOS_LOCATION
+    ubicacion: process.env.AMOS_LOCATION,
+    ip_totem: process.env.TOTEM_IP
   });
 });
 
