@@ -6,13 +6,13 @@ Se debe instalar Termux version 1001 para el android 7
 Instalar desde Play Store RawBt (app de impresión)
 
 Instalar node.js
-
+    apt update
     pkg install nodejs-lts
 
 Instalar Git
     pkg install git
 
-    git clone https://github.com/turepo/new_get_ip.git
+    git clone https://github.com/dorian-cesar/new_get_ip.git
     cd new_get_ip
     npm install
 
